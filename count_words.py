@@ -27,14 +27,10 @@ for filename in glob.glob(sys.argv[1] + "/*/*"):
     with open(filename) as f:
         for line in f:
             
-            # Ignore empty lines and lines that are just metadata
-            if line != "" and line[0] != "<":
-                line = line.split()
-
-                # Increment count of each word and total words
-                for word in line:
-                    word_counts[word] += 1
-                    total_words += 1
+            # Increment count of each word and total words
+            for word in line.split():
+                word_counts[word.lower()] += 1
+                total_words += 1
 
 # Sort list to find top 10
 sorted_counts = sorted(word_counts.items(), key=operator.itemgetter(1), reverse=True)
