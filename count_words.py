@@ -22,22 +22,25 @@ if len(sys.argv) != 2:
 word_counts = collections.defaultdict(int)
 total_words = 0
 
+punct = {".", ",", "#", ")", "(", "\"", "—", ":", ";", "-", "–", "/", "!"}
+
 # For each file in the directory
-for filename in glob.glob(sys.argv[1] + "/*/*"):
+for filename in glob.glob(sys.argv[1] + "/*/*_clean"):
     with open(filename) as f:
         for line in f:
             
             # Increment count of each word and total words
             for word in line.split():
-                word_counts[word.lower()] += 1
-                total_words += 1
+                if word not in punct:
+                  word_counts[word.lower()] += 1
+                  total_words += 1
 
 # Sort list to find top 10
 sorted_counts = sorted(word_counts.items(), key=operator.itemgetter(1), reverse=True)
 
 # Output relevant information
-print("Top 10 words: ")
-for i in range(10):
+print("Top 100 words: ")
+for i in range(100):
     print("\t" + str(sorted_counts[i]))
 print("Word tokens: " + str(total_words))
 print("Word types: " + str(len(word_counts)))
