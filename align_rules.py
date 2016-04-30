@@ -6,6 +6,45 @@ infile_name = sys.argv[1]
 
 rules = [ ]
 
+def find_dif(list_1, list_2):
+  shorter_len = len(list_1)
+  if len(list_2) < shorter_len:
+    shorter_len = len(list_2)
+
+  same_index_front = 0
+  for i in range(shorter_len):
+    if list_1[i] == list_2[i]:
+      same_index_front += 1
+    else:
+      break
+
+  same_index_back = 0
+  for i in range(1, shorter_len + 1):
+    if list_1[len(list_1) - i] == list_2[len(list_2) - i]:
+      same_index_back += 1
+    else:
+      break
+
+  list_1_val = ""
+  for val in list_1:
+    list_1_val += val.split(",")[2]
+  list_2_val = ""
+  for val in list_2:
+    list_2_val += val.split(",")[2]
+
+  if same_index_front > 0 or same_index_back > 0:
+    first_suffix = ""
+    for j in range(same_index_front, len(list_1) - same_index_back):
+      first_suffix += list_1[j].split(",")[2]
+    second_suffix = ""
+    for j in range(same_index_front, len(list_2) - same_index_back):
+      second_suffix += list_2[j].split(",")[2]
+
+    return first_suffix + "~" + second_suffix
+  else:
+    return ""
+
+
 with open(infile_name, encoding = "utf-8") as infile:
   for line in infile:
     # Get the length of the original word. This can be used to indicate
@@ -30,20 +69,31 @@ with open(infile_name, encoding = "utf-8") as infile:
 
     new_word = comps[2]
 
-    print(comps)
-
-    changes = comps[4]
+    changes = comps[3]
     if changes != "None":
-      change_comps = changes.split(";")
+      change_comps = changes.split("|")
       index = 0
       for change in change_comps:
-        index += 1
-        parts = change.replace("(", "").replace(")", "").split(",")
-        first_char = parts[0]
-        second_char = parts[1]
+        change_text = change.replace("-", "").replace("(", "").replace(")", "").replace(" ", "")
+        parts = change_text.split(",")
+        function = parts[0]
+        orig_index = int(parts[1])
+        final_index = int(parts[2])
 
-        if first_char != second_char: 
-          change_list.append(str(index) + "-" + first_char + "/" + second_char)
+        change_str = ""
+
+        if orig_index == 0:
+          # Prefix.
+          change_str = "p"
+        elif final_index >= orig_index:
+          # Suffix.
+          orig_index = word_length - orig_index
+          change_str = "s" + str(orig_index)
+        else:
+          # Infix.
+          change_str = "i" + str(orig_index)
+
+        change_list.append(function + "," + change_str + "," + new_word[final_index])
 
     rules.append((attr_dict, change_list, comps[0], new_word))
 
@@ -90,13 +140,30 @@ for i in range(len(rules)):
                 attr_str_val += attr_name + "=" + val + ","
 
             attr_diff = last_different_attr_name + "\t" + last_different_attr_val + "\t" + attr_str_val
-            if not attr_diff in attr_dict:
-              attr_dict[attr_diff] = [ ]
-            attr_dict[attr_diff].append((list_1, list_2))
+            val_diff = find_dif(list_1, list_2)
+            if val_diff != "" and val_diff != "~":
+              val_comps = last_different_attr_val.split("~")
+              str_comps = val_diff.split("~")
 
-            print(attr_diff)
-            print(list_1)
-            print(list_2)
+              attr_name_0 = last_different_attr_name + ":" + val_comps[0]
+              if not attr_name_0 in attr_dict.keys():
+                attr_dict[attr_name_0] = { }
+              if not str_comps[0] in attr_dict[attr_name_0].keys():
+                attr_dict[attr_name_0][str_comps[0]] = 0
+              attr_dict[attr_name_0][str_comps[0]] += 1
+
+              attr_name_1 = last_different_attr_name + ":" + val_comps[1]
+              if not attr_name_1 in attr_dict.keys():
+                attr_dict[attr_name_1] = { }
+              if not str_comps[1] in attr_dict[attr_name_1].keys():
+                attr_dict[attr_name_1][str_comps[1]] = 0
+              attr_dict[attr_name_1][str_comps[1]] += 1
+              #if not attr_diff in attr_dict.keys():
+              #  attr_dict[attr_diff] = { }
+              #if not val_diff in attr_dict[attr_diff].keys():
+              #  attr_dict[attr_diff][val_diff] = 0 
+              #attr_dict[attr_diff][val_diff] += 1
+
       elif abs(len(attr_1) - len(attr_2)) == 1:
         same_base = True
 
@@ -144,28 +211,35 @@ for i in range(len(rules)):
 
         if same_base:
           attr_diff = extra_attr + "\t~" + extra_val + "\t" + base_val
-          if not attr_diff in attr_dict:
-            attr_dict[attr_diff] = [ ]
-          attr_dict[attr_diff].append((smaller, bigger))
 
-          print(attr_diff)
-          print(smaller)
-          print(bigger)
+          val_diff = find_dif(smaller, bigger)
+          if val_diff != "" and val_diff != "~":
+            val_comps = [ "", extra_val ]
+            str_comps = val_diff.split("~")
+
+            attr_name_0 = extra_attr + ":" + val_comps[0]
+            if not attr_name_0 in attr_dict.keys():
+              attr_dict[attr_name_0] = { }
+            if not str_comps[0] in attr_dict[attr_name_0].keys():
+              attr_dict[attr_name_0][str_comps[0]] = 0
+            attr_dict[attr_name_0][str_comps[0]] += 1
+
+            attr_name_1 = extra_attr + ":" + val_comps[1]
+            if not attr_name_1 in attr_dict.keys():
+              attr_dict[attr_name_1] = { }
+            if not str_comps[1] in attr_dict[attr_name_1].keys():
+              attr_dict[attr_name_1][str_comps[1]] = 0
+            attr_dict[attr_name_1][str_comps[1]] += 1
+            #if not attr_diff in attr_dict.keys():
+            #  attr_dict[attr_diff] = { }
+            #if not val_diff in attr_dict[attr_diff].keys():
+            #  attr_dict[attr_diff][val_diff] = 0 
+            #attr_dict[attr_diff][val_diff] += 1
 
 for attr_type, change_list in attr_dict.items():
-  print("***** NEW ATTRIBUTE *****")
-  attr_comps = attr_type.split("\t")
-  attr_name = attr_comps[0]
-  attr_vals = attr_comps[1]
-  base_vals = attr_comps[2]
+  print(attr_type)
 
-  val_changes = att_vals.split("~")
-  orig_val = val_changes[0]
-  new_val = val_changes[1]
+  sorted_changes = sorted(change_list.items(), key = operator.itemgetter(1))
 
-  if orig_val == "":
-    orig_val = "none"
-
-  print("With base form " + base_vals + ", changing " + attr_name + " from " + orig_val + " to " + new_val)
-  
-  # for manip_1, manip_2 in change_list:
+  for change, count in sorted_changes:
+    print(str(count) + "\t" + change)
